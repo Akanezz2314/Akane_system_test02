@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>พรรคมาร - Character Voting</title>
+    <style>
+        body { 
+            font-family: 'Tahoma', sans-serif; 
+            background: #1a1a1a; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+        .container { 
+            background: #ffffff; 
+            padding: 30px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(231, 76, 60, 0.4); 
+            width: 350px; 
+            text-align: center; 
+            border-top: 8px solid #c0392b; 
+        }
+        h2 { color: #c0392b; margin-bottom: 5px; }
+        p { color: #666; margin-bottom: 20px; }
+        input, select { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 10px; 
+            box-sizing: border-box; 
+            font-size: 16px; 
+        }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 16px; 
+            transition: 0.3s; 
+            margin-top: 10px; 
+        }
+        .btn-vote { background: #c0392b; color: white; }
+        .btn-vote:hover { background: #a93226; transform: scale(1.02); }
+        .btn-skip { background: #4a4a4a; color: white; }
+        .btn-skip:hover { background: #333; }
+        .hidden { display: none; }
+        .status-msg { color: #c0392b; font-weight: bold; margin-top: 20px; font-size: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="login-section">
+    <h2>พรรคมาร</h2>
+    <p>ยืนยันตัวตนพรรคมาร</p>
+    <input type="text" id="player-name" placeholder="ชื่อตัวละครของคุณ...">
+    <button class="btn-vote" onclick="checkUser()">เข้าสู่หน้าโหวต</button>
+</div>
+
+<div class="container hidden" id="vote-section">
+    <h2 id="welcome-msg">สวัสดี</h2>
+    <p>ท่านต้องการโหวตกินใคร?</p>
+    <select id="vote-target">
+        <option value="คีธ">คีธ</option>
+        <option value="เสอเหนียน">เสอเหนียน</option>
+        <option value="คิมูระ">คิมูระ</option>
+        <option value="ซานหู">ซานหู</option>
+        <option value="เสวียนชงหยวน">เสวียนชงหยวน</option>
+        <option value="ชิดาเระ">ชิดาเระ</option>
+        <option value="เซราลิธ">เซราลิธ</option>
+        <option value="คิมหันต์">คิมหันต์</option>
+        <option value="ไชนี่">ไชนี่</option>
+        <option value="เฟิงมี่">เฟิงมี่</option>
+        <option value="อ็อคเทฟ">อ็อคเทฟ</option>
+        <option value="เมแกน">เมแกน</option>
+        <option value="ฮุยปา">ฮุยปา</option>
+    </select>
+    <button class="btn-vote" onclick="submitVote()">ลงคะแนนโหวต</button>
+    <button class="btn-skip" onclick="skipVote()">ข้ามการโหวต</button>
+</div>
+
+<div class="container hidden" id="finish-section">
+    <h2 class="status-msg">รับผลโหวตพรรคมารเรียบร้อย !</h2>
+    <p>เจอกันในเกมจ้า</p>
+</div>
+
+<script>
+    // รายชื่อผู้ที่มีสิทธิ์เข้าโหวต
+    const allowedUsers = [
+        "คีธ", "เสอเหนียน", "คิมูระ", "ซานหู", "เสวียนชงหยวน", 
+        "ชิดาเระ", "เซราลิธ", "คิมหันต์", "ไชนี่", "เฟิงมี่", 
+        "อ็อคเทฟ", "เมแกน", "ฮุยปา", "ชื่อ",
+        "Staff_01", "Staff_02", "Admin_Test"
+    ];
+
+    let currentUser = "";
+    
+    // SCRIPT_URL เดิมของคุณ
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0hwA9CgjgLG3ylTKzwsiuEFAdaDZpDDJ24dZ02yB-TZ-h3gbw_Mo43KWLB3t6O_9Idg/exec";
+
+    function checkUser() {
+        const nameInput = document.getElementById('player-name').value.trim();
+        if (allowedUsers.includes(nameInput)) {
+            currentUser = nameInput;
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('vote-section').classList.remove('hidden');
+            document.getElementById('welcome-msg').innerText = "สวัสดีท่าน " + currentUser;
+        } else {
+            alert("ขออภัย ไม่พบชื่อ '" + nameInput + "' ในระบบพรรคมาร");
+        }
+    }
+
+    function submitVote() {
+        const target = document.getElementById('vote-target').value;
+        sendData(currentUser, target);
+    }
+
+    function skipVote() {
+        sendData(currentUser, "ข้ามการโหวต");
+    }
+
+    function sendData(voter, voteFor) {
+        document.getElementById('vote-section').classList.add('hidden');
+        document.getElementById('finish-section').classList.remove('hidden');
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ 
+                voter: voter, 
+                voteFor: voteFor,
+                type: "พรรคมาร" 
+            })
+        });
+    }
+</script>
+
+</body>
+</html>
