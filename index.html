@@ -7,53 +7,98 @@
     <style>
         body { 
             font-family: 'Tahoma', sans-serif; 
-            background: #1a1a1a; 
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
             display: flex; 
             justify-content: center; 
             align-items: center; 
             min-height: 100vh; 
-            margin: 0; 
+            background: #0a0a0a; /* ดำสนิท */
         }
+
+        /* --- Particle Canvas (ละอองเพลิง) --- */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
         .container { 
-            background: #ffffff; 
-            padding: 30px; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 30px rgba(231, 76, 60, 0.4); 
+            background: rgba(20, 20, 20, 0.6); /* ดำโปร่งแสง */
+            backdrop-filter: blur(15px); 
+            -webkit-backdrop-filter: blur(15px);
+            padding: 40px; 
+            border-radius: 30px; 
+            box-shadow: 0 20px 50px rgba(255, 0, 0, 0.15); /* เงาสีแดงจางๆ */
             width: 350px; 
             text-align: center; 
-            border-top: 8px solid #c0392b; 
+            border: 1px solid rgba(255, 0, 0, 0.2); /* ขอบแดงบางๆ */
+            position: relative;
+            z-index: 1;
+            color: white;
         }
-        h2 { color: #c0392b; margin-bottom: 5px; }
-        p { color: #666; margin-bottom: 20px; }
+
+        h2 { 
+            color: #ff4d4d; 
+            margin-bottom: 5px; 
+            font-size: 28px; 
+            text-shadow: 0 0 15px rgba(255, 0, 0, 0.6); 
+            letter-spacing: 2px;
+        }
+        
+        p { color: #b3b3b3; margin-bottom: 20px; font-size: 15px; }
+
         input, select { 
-            width: 100%; 
-            padding: 12px; 
-            margin: 10px 0; 
-            border: 1px solid #ddd; 
-            border-radius: 10px; 
-            box-sizing: border-box; 
-            font-size: 16px; 
+            width: 100%; padding: 14px; margin: 10px 0; 
+            border: 1px solid rgba(255, 0, 0, 0.3); 
+            border-radius: 12px; 
+            box-sizing: border-box; font-size: 16px; outline: none; 
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            transition: 0.3s;
         }
+
+        input::placeholder { color: #666; }
+        option { background: #1a1a1a; color: white; }
+
+        input:focus, select:focus {
+            border-color: #ff4d4d;
+            background: rgba(255, 0, 0, 0.05);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+        }
+
         button { 
-            width: 100%; 
-            padding: 12px; 
-            border: none; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 16px; 
-            transition: 0.3s; 
-            margin-top: 10px; 
+            width: 100%; padding: 14px; border: none; border-radius: 12px; 
+            cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; margin-top: 10px; 
         }
-        .btn-vote { background: #c0392b; color: white; }
-        .btn-vote:hover { background: #a93226; transform: scale(1.02); }
-        .btn-skip { background: #4a4a4a; color: white; }
-        .btn-skip:hover { background: #333; }
+
+        .btn-vote { 
+            background: linear-gradient(45deg, #8b0000, #ff0000); /* แดงไล่เฉด */
+            color: white; 
+            box-shadow: 0 5px 15px rgba(255, 0, 0, 0.3);
+            text-transform: uppercase;
+        }
+
+        .btn-vote:hover { 
+            background: linear-gradient(45deg, #ff0000, #ff4d4d); 
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 0, 0, 0.5);
+        }
+
+        .btn-skip { background: rgba(255, 255, 255, 0.05); color: #999; }
+        .btn-skip:hover { background: rgba(255, 255, 255, 0.1); color: white; }
+
         .hidden { display: none; }
-        .status-msg { color: #c0392b; font-weight: bold; margin-top: 20px; font-size: 20px; }
+        .status-msg { color: #ff4d4d; font-weight: bold; margin-top: 20px; font-size: 1.3rem; text-shadow: 0 0 10px rgba(255, 0, 0, 0.4); }
     </style>
 </head>
 <body>
+
+<canvas id="particle-canvas"></canvas>
 
 <div class="container" id="login-section">
     <h2>พรรคมาร</h2>
@@ -79,7 +124,8 @@
         <option value="อ็อคเทฟ">อ็อคเทฟ</option>
         <option value="เมแกน">เมแกน</option>
         <option value="ฮุยปา">ฮุยปา</option>
-        <option value="สีน้ำ">สีน้ำ</option> </select>
+        <option value="สีน้ำ">สีน้ำ</option> 
+    </select>
     <button class="btn-vote" onclick="submitVote()">ลงคะแนนโหวต</button>
     <button class="btn-skip" onclick="skipVote()">ข้ามการโหวต</button>
 </div>
@@ -90,17 +136,73 @@
 </div>
 
 <script>
-    // รายชื่อผู้ที่มีสิทธิ์เข้าโหวต
+    // --- Particle Effect Script (โหมดเพลิงอเวจี) ---
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function initCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 2.5 + 0.5;
+            this.speedX = Math.random() * 0.4 - 0.2;
+            this.speedY = Math.random() * -0.8 - 0.2; // ลอยขึ้นช้าๆ เหมือนควันไฟ
+            this.opacity = Math.random() * 0.6 + 0.2;
+            this.color = Math.random() > 0.5 ? '#ff0000' : '#8b0000'; // แดงสว่าง กับ แดงเข้ม
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            if (this.y < 0) {
+                this.y = canvas.height;
+                this.x = Math.random() * canvas.width;
+            }
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.globalAlpha = this.opacity;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function createParticles() {
+        particles = [];
+        for (let i = 0; i < 120; i++) {
+            particles.push(new Particle());
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+            p.update();
+            p.draw();
+        });
+        requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', initCanvas);
+    initCanvas();
+    createParticles();
+    animate();
+    // ------------------------------
+
     const allowedUsers = [
         "คีธ", "เสอเหนียน", "คิมูระ", "ชานหู", "เสวียนชงหยวน", 
         "ชิดาเระ", "เซราลิธ", "คิมหันต์", "ไชนี่", "เฟิงมี่", 
-        "อ็อคเทฟ", "เมแกน", "ฮุยปา", "ชื่อ", "สีน้ำ", // เพิ่มตรงนี้
-        "Staff_01", "Staff_02", "Admin_Test"
+        "อ็อคเทฟ", "เมแกน", "ฮุยปา", "ชื่อ", "สีน้ำ",
+        "Staff_01", "Staff_02", "Admin_Test" 
     ];
 
     let currentUser = "";
-    
-    // SCRIPT_URL เดิมของคุณ
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0hwA9CgjgLG3ylTKzwsiuEFAdaDZpDDJ24dZ02yB-TZ-h3gbw_Mo43KWLB3t6O_9Idg/exec";
 
     function checkUser() {
